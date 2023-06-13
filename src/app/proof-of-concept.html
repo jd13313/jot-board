@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .draggable {
+            width: 25%;
+            min-height: 6.5em;
+            margin: 1rem 0 0 1rem;
+            background-color: #29e;
+            color: white;
+            border-radius: 0.75em;
+            padding: 4%;
+            touch-action: none;
+            user-select: none;
+            transform: translate(0px, 0px);
+            border: 2px solid black;
+        }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+</head>
+<body>
+    <div id="board">
+        <div id="board-item-1" class="draggable">
+            hello world!
+        </div>
+        <div id="board-item-2" class="draggable">
+            hello world #2
+        </div>
+        <div id="board-item-3" class="draggable">
+            hello world #3
+        </div>
+    </div>
+
+    <script>
+        loadStoredPositions();
+
+
+        interact('.draggable')
+            .draggable({
+                intertia: true,
+                modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: 'parent',
+                    endOnly: true
+                })
+                ],
+                autoScroll: true,
+                listeners: {
+                    move: dragMoveListener,
+                    end (event) {
+                        var textEl = event.target.querySelector('p');
+                    }
+                }
+            })
+
+        function dragMoveListener(event) {
+            var target = event.target
+            // keep the dragged position in the data-x/data-y attributes
+            var x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
+            var y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
+
+            // translate the element
+            target.style.transform = 'translate(' + x + 'px, ' + y + 'px)'
+
+            // update the posiion attributes
+            target.setAttribute('data-x', x)
+            target.setAttribute('data-y', y)
+
+            // position storage
+            storePositions(target.id, x, y);
+        }
+
+        function storePositions (id, x, y) {
+            const positionDataString = localStorage.getItem('positions') ?? JSON.stringify({});
+            const positions = JSON.parse(positionDataString);
+
+            positions[id] = {x, y};
+            
+            localStorage.setItem('positions', JSON.stringify(positions));
+        }
+
+        function fetchPositions (id) {
+            const positions = localStorage.getItem('positions');
+            if (positions) {
+                return JSON.parse(positions)[id];
+            }
+
+            return {x: 0, y: 0};
+        }
+
+        function loadStoredPositions() {
+            const draggables = document.getElementsByClassName('draggable');
+
+            Array.from(draggables).forEach(draggable => {
+                const position = fetchPositions(draggable.id);
+                draggable.setAttribute('data-x', position.x);
+                draggable.setAttribute('data-y', position.y);
+                draggable.style.transform = `translate(${position.x}px, ${position.y}px)`;
+            });
+
+            console.log('Positions loaded!');
+        }
+
+        window.dragMoveListener = dragMoveListener
+    </script> 
+</body>
+</html>
