@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('content');
             $table->integer('position_x')->default(0);
             $table->integer('position_y')->default(0);
+            $table->integer('position_z')->default(0);
             $table->timestamps();
 
             $table->foreign('board_id')->references('id')->on('boards');
