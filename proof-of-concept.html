@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .draggable {
+            width: 25%;
+            min-height: 200px;
+            min-width: 300px;
+            margin: 1rem 0 0 1rem;
+            background-color: #29e;
+            color: white;
+            border-radius: 0.75em;
+            padding: 15px;
+            touch-action: none;
+            user-select: none;
+            transform: translate(0px, 0px);
+            border: 2px solid black;
+            z-index: 0;
+            position: relative;
+        }
+
+        .item-controls {
+            display: flex;
+            height: 25px;
+            justify-content: flex-end;
+        }
+
+        .item-controls button:hover {
+            cursor: pointer;
+        }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+</head>
+<body>
+    <div id="board">
+        <div id="board-item-1" class="draggable item">
+            <div class="item-controls">
+                <button class="minimize">&UnderBar;</button>
+                <button class="close-item">&times;</button>
+                <button class="bring-to-top zindex-button">Bring To Top</button>
+                <button class="send-to-bottom zindex-button">Send To Bottom</button>
+            </div>
+
+            hello world!
+        </div>
+        <div id="board-item-2" class="draggable item">
+            <div class="item-controls">
+                <button class="minimize">&UnderBar;</button>
+                <button class="close-item">&times;</button>
+                <button class="bring-to-top zindex-button">Bring To Top</button>
+                <button class="send-to-bottom zindex-button">Send To Bottom</button>
+            </div>
+            hello world #2
+        </div>
+        <div id="board-item-3" class="draggable item">
+            <div class="item-controls">
+                <button class="minimize">&UnderBar;</button>
+                <button class="close-item">&times;</button>
+                <button class="bring-to-top zindex-button">Bring To Top</button>
+                <button class="send-to-bottom zindex-button">Send To Bottom</button>
+            </div>
+            hello world #3
+        </div>
+    </div>
+
+    <script>
+        loadStoredPositions();
+
+        interact('.draggable')
+            .draggable({
+                intertia: true,
+                modifiers: [
+                interact.modifiers.restrictRect({
+                    restriction: 'parent',
+                    endOnly: true
+                })
+                ],
+                autoScroll: true,
+                listeners: {
+                    move: dragMoveListener,
+                    end (event) {
+                        var textEl = event.target.querySelector('p');
+                    }
+                }
+            })
+
+        // "Send to Bottom" / "Bring to Front" click events
+        Array.from(document.getElementsByClassName('zindex-button')).forEach(bringToTopButton => {
+            bringToTopButton.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                const currentItem = bringToTopButton.closest('.item');
+                let restZIndex;
+                let currentZIndex;
+
+                if (bringToTopButton.classList.contains('bring-to-top')) {
+                    restZIndex = 0;
+                    currentZIndex = 1;
+                } else if (bringToTopButton.classList.contains('send-to-bottom')) {
+                    restZIndex = 1;
+                    currentZIndex = 0;
+                } else {
+                    restZIndex, currentZIndex = 0;
+                }
+                
+                Array.from(document.getElementsByClassName('item')).forEach(item => {
+                    item.style.zIndex = restZIndex;
+                    const x = (parseFloat(item.getAttribute('data-x')) || 0);
+                    const y = (parseFloat(item.getAttribute('data-y')) || 0);
+
+                    storePositions(item.id, x, y, restZIndex);
+                })
+
+                currentItem.style.zIndex = currentZIndex;
+
+                // Save updated position
+                const x = (parseFloat(currentItem.getAttribute('data-x')) || 0);
+                const y = (parseFloat(currentItem.getAttribute('data-y')) || 0);
+                storePositions(currentItem.id, x, y, currentZIndex);
+            });
+        });
+
+
+        Array.from(document.getElementsByClassName('close-item')).forEach(closeButton => {
+            closeButton.addEventListener('click', (e) => {
+                console.log('event');
+                e.preventDefault();
+                const currentItem = closeButton.closest('.item');
+                const confirmation = confirm('Delete Item?');
+
+                if (confirmation) {
+                    currentItem.remove();
+                }
+            });
+        });
+
+        function dragMoveListener(event) {
+            const target = event.target
+            // keep the dragged position in the data-x/data-y attributes
+            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+            const z = target.style.zIndex;
+
+            // translate the element
+            target.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+
+            // update the posiion attributes
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+            
+
+            // position storage
+            storePositions(target.id, x, z);
+        }
+
+        function storePositions (id, x, y, z) {
+            const positionDataString = localStorage.getItem('positions') ?? JSON.stringify({});
+            const positions = JSON.parse(positionDataString);
+            const deleted = false;
+
+            positions[id] = {x, y, z, deleted};
+            
+            localStorage.setItem('positions', JSON.stringify(positions));
+        }
+
+        function fetchPositions (id) {
+            const positions = localStorage.getItem('positions');
+            if (positions) {
+                return JSON.parse(positions)[id];
+            }
+
+            return {x: 0, y: 0, z: 0, deleted: false};
+        }
+
+        function loadStoredPositions() {
+            const draggables = document.getElementsByClassName('draggable');
+
+            Array.from(draggables).forEach(draggable => {
+                const position = fetchPositions(draggable.id);
+                draggable.setAttribute('data-x', position.x);
+                draggable.setAttribute('data-y', position.y);
+                draggable.style.zIndex = position.z;
+                draggable.style.transform = `translate(${position.x}px, ${position.y}px)`;
+            });
+
+            console.log('Positions loaded!');
+        }
+
+        window.dragMoveListener = dragMoveListener
+    </script> 
+</body>
+</html>
